@@ -5,20 +5,17 @@ import express from "express";
 const app = express();
 const server = http.createServer(app);
 
-// Define allowed origins for production and local development
+// Allow any Vercel URL or Localhost
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://connectify-seven-rust.vercel.app", 
-  /\.vercel\.app$/ // Matches all Vercel preview/branch URLs
+  "https://connectify-seven-rust.vercel.app",
 ];
 
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps) or if it's in our allowed list
-      if (!origin || allowedOrigins.some(allowed => 
-        allowed instanceof RegExp ? allowed.test(origin) : allowed === origin
-      )) {
+      // Allow if no origin (mobile) or matches localhost/main domain/any vercel subdomain
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -42,7 +39,6 @@ io.on("connection", (socket) => {
 
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-  // --- SIGNALING EVENTS ---
   socket.on("call-user", ({ to, offer, fromName }) => {
     const receiverSocketId = getReceiverSocketId(to);
     if (receiverSocketId) io.to(receiverSocketId).emit("incoming-call", { from: userId, offer, fromName });
@@ -66,7 +62,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (userId) {
       delete userSocketMap[userId];
-      io.emit("user-online", userId);
+      io.emit("user-offline", userId);
     }
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });

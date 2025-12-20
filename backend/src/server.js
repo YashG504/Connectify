@@ -9,24 +9,21 @@ import userRoutes from "./routes/user.route.js";
 import chatRoutes from "./routes/chat.route.js";
 
 import { connectDB } from "./lib/db.js";
+// IMPORTANT: Import the app and server created in socket.js
 import { app, server } from "./lib/socket.js"; 
 
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
-// Define allowed origins (Matches socket.js for consistency)
+// RE-USE THE SAME CORS LOGIC
 const allowedOrigins = [
   "http://localhost:5173",
   "https://connectify-seven-rust.vercel.app",
-  /\.vercel\.app$/
 ];
 
-// Unified CORS to prevent handshake and API errors
 app.use(cors({ 
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some(allowed => 
-      allowed instanceof RegExp ? allowed.test(origin) : allowed === origin
-    )) {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -37,21 +34,19 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 
-// Handle preflight OPTIONS requests
+// Handle preflight OPTIONS requests for all routes
 app.options("*", cors());
 
 app.use(express.json());
 app.use(cookieParser());
 
-// Serve uploaded files
 app.use("/uploads", express.static("uploads"));
 
-// API Routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Static assets for production (optional if you deploy frontend on Vercel)
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
   app.get("*", (req, res) => {
@@ -59,7 +54,6 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// Start the server using the http server instance
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   connectDB();
