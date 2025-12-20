@@ -5,17 +5,14 @@ import express from "express";
 const app = express();
 const server = http.createServer(app);
 
-// Allow any Vercel URL or Localhost
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://connectify-seven-rust.vercel.app",
-];
-
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      // Allow if no origin (mobile) or matches localhost/main domain/any vercel subdomain
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+      // Allow local development and ANY vercel subdomain
+      if (!origin || 
+          origin === "http://localhost:5173" || 
+          origin.endsWith(".vercel.app") || 
+          origin.includes("yashs-projects")) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));

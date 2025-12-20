@@ -9,21 +9,19 @@ import userRoutes from "./routes/user.route.js";
 import chatRoutes from "./routes/chat.route.js";
 
 import { connectDB } from "./lib/db.js";
-// IMPORTANT: Import the app and server created in socket.js
+// We import the instances from socket.js to share the same CORS/Server setup
 import { app, server } from "./lib/socket.js"; 
 
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
-// RE-USE THE SAME CORS LOGIC
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://connectify-seven-rust.vercel.app",
-];
-
+// API CORS logic (must match socket logic)
 app.use(cors({ 
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+    if (!origin || 
+        origin === "http://localhost:5173" || 
+        origin.endsWith(".vercel.app") || 
+        origin.includes("yashs-projects")) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -34,7 +32,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 
-// Handle preflight OPTIONS requests for all routes
+// This specifically fixes the "Preflight request" 404/CORS error
 app.options("*", cors());
 
 app.use(express.json());
