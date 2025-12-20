@@ -14,16 +14,17 @@ import { app, server } from "./lib/socket.js";
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
-// Define allowed origins clearly
+// 1. UPDATED ORIGINS: Added your new Render frontend URL
 const allowedOrigins = [
-  "http://localhost:5173", // Vite local
-  "https://connectify-seven-rust.vercel.app", // Your Vercel production URL
-  /\.vercel\.app$/ // This allows all Vercel preview deployments
+  "http://localhost:5173", 
+  "https://connectify-seven-rust.vercel.app",
+  "https://connectify-frontend-b6wv.onrender.com", // Your Render Static Site
+  /\.vercel\.app$/,
+  /\.onrender\.com$/ // This allows any of your future Render deployments
 ];
 
 app.use(cors({ 
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     const isAllowed = allowedOrigins.some((allowed) => {
@@ -42,12 +43,11 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 
-// Handle Preflight requests
+// This specifically handles the "Preflight" check for Signup/Login
 app.options("*", cors());
 
 app.use(express.json());
 app.use(cookieParser());
-
 app.use("/uploads", express.static("uploads"));
 
 // Routes

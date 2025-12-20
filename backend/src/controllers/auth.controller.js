@@ -29,14 +29,14 @@ export async function signup(req, res) {
       profilePic: `https://avatar.iran.liara.run/public/${idx}.png`,
     });
 
-    // JWT Generation
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET_KEY, { expiresIn: "7d" });
     
+    // Cookie Fix for Render/Production
     res.cookie("jwt", token, { 
-      maxAge: 7*24*60*60*1000, 
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
       httpOnly: true, 
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", 
-      secure: process.env.NODE_ENV === "production" 
+      sameSite: "none", // Must be "none" for cross-site cookies
+      secure: true      // Must be true if sameSite is "none"
     });
 
     res.status(201).json(newUser);
@@ -59,10 +59,10 @@ export async function login(req, res) {
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: "7d" });
     
     res.cookie("jwt", token, { 
-      maxAge: 7*24*60*60*1000, 
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
       httpOnly: true, 
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", 
-      secure: process.env.NODE_ENV === "production" 
+      sameSite: "none", 
+      secure: true 
     });
 
     res.status(200).json(user);
@@ -73,7 +73,11 @@ export async function login(req, res) {
 
 // 4. LOGOUT
 export function logout(req, res) {
-  res.clearCookie("jwt");
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    sameSite: "none",
+    secure: true
+  });
   res.status(200).json({ message: "Logout successful" });
 }
 
@@ -85,7 +89,6 @@ export async function onboard(req, res) {
       { ...req.body, isOnboarded: true },
       { new: true }
     );
-
     res.status(200).json(updatedUser);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });

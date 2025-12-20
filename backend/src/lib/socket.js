@@ -5,15 +5,16 @@ import express from "express";
 const app = express();
 const server = http.createServer(app);
 
-// Explicitly define your frontend URL for production and development
+// Explicitly define your new Render frontend URL
 const allowedOrigins = [
   "http://localhost:5173", 
-  "https://connectify-seven-rust.vercel.app"
+  "https://connectify-seven-rust.vercel.app",
+  "https://connectify-frontend-b6wv.onrender.com" // New Render Static Site
 ];
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins, // Set specific origins instead of 'true'
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST"]
   },
@@ -27,10 +28,8 @@ io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
   if (userId && userId !== "undefined") {
     userSocketMap[userId] = socket.id;
-    io.emit("user-online", userId);
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
   }
-
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("call-user", ({ to, offer, fromName }) => {
     const receiverSocketId = getReceiverSocketId(to);
@@ -55,7 +54,6 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (userId) {
       delete userSocketMap[userId];
-      io.emit("user-offline", userId);
     }
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
