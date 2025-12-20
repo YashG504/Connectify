@@ -5,9 +5,15 @@ import express from "express";
 const app = express();
 const server = http.createServer(app);
 
+// Explicitly define your frontend URL for production and development
+const allowedOrigins = [
+  "http://localhost:5173", 
+  "https://connectify-seven-rust.vercel.app"
+];
+
 const io = new Server(server, {
   cors: {
-    origin: true,
+    origin: allowedOrigins, // Set specific origins instead of 'true'
     credentials: true,
     methods: ["GET", "POST"]
   },
