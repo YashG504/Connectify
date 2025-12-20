@@ -17,17 +17,7 @@ const __dirname = path.resolve();
 
 // API CORS logic (must match socket logic)
 app.use(cors({ 
-  origin: (origin, callback) => {
-    if (!origin || 
-        origin === "http://localhost:5173" || 
-        origin.endsWith(".vercel.app") || 
-        origin.includes("yashs-projects") ||
-        origin === "https://connectify-hqt7vjtr3-yashs-projects-7820dcd1.vercel.app") {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]

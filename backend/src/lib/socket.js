@@ -7,18 +7,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
-      // Allow local development and ANY vercel subdomain
-      if (!origin || 
-          origin === "http://localhost:5173" || 
-          origin.endsWith(".vercel.app") || 
-          origin.includes("yashs-projects") ||
-          origin === "https://connectify-hqt7vjtr3-yashs-projects-7820dcd1.vercel.app") {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: true,
     credentials: true,
     methods: ["GET", "POST"]
   },
