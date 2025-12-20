@@ -12,7 +12,8 @@ const io = new Server(server, {
       if (!origin || 
           origin === "http://localhost:5173" || 
           origin.endsWith(".vercel.app") || 
-          origin.includes("yashs-projects")) {
+          origin.includes("yashs-projects") ||
+          origin === "https://connectify-hqt7vjtr3-yashs-projects-7820dcd1.vercel.app") {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
