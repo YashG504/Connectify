@@ -5,11 +5,27 @@ import express from "express";
 const app = express();
 const server = http.createServer(app);
 
+// Define allowed origins for production and local development
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://connectify-seven-rust.vercel.app", 
+  /\.vercel\.app$/ // Matches all Vercel preview/branch URLs
+];
+
 const io = new Server(server, {
-  cors: { 
-    // Add your Vercel URL to the origin array
-    origin: ["http://localhost:5173", "https://connectify-seven-rust.vercel.app"], 
-    credentials: true 
+  cors: {
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps) or if it's in our allowed list
+      if (!origin || allowedOrigins.some(allowed => 
+        allowed instanceof RegExp ? allowed.test(origin) : allowed === origin
+      )) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST"]
   },
 });
 
@@ -37,7 +53,6 @@ io.on("connection", (socket) => {
     if (callerSocketId) io.to(callerSocketId).emit("call-accepted", { answer });
   });
 
-  // CRITICAL: Passing network paths between browsers
   socket.on("ice-candidate", ({ to, candidate }) => {
     const targetSocketId = getReceiverSocketId(to);
     if (targetSocketId) io.to(targetSocketId).emit("ice-candidate", { candidate });
@@ -51,12 +66,11 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (userId) {
       delete userSocketMap[userId];
-      io.emit("user-offline", userId);
+      io.emit("user-online", userId);
     }
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 
-  // TYPING INDICATOR
   socket.on("typing", ({ to, typing }) => {
     const receiverSocketId = getReceiverSocketId(to);
     if (receiverSocketId) io.to(receiverSocketId).emit("typing", { from: userId, typing });
