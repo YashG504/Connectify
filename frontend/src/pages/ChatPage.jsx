@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom"; // Added useNavigate
 import useAuthUser from "../hooks/useAuthUser";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMessages, sendMessage, getUserProfile, addReaction, uploadImage } from "../lib/api";
+import { getMessages, sendMessage, getUserProfile, addReaction, uploadImage, markMessagesAsRead, deleteMessage } from "../lib/api";
 import { socket } from "../lib/socket"; 
 import toast from "react-hot-toast";
 
@@ -34,7 +34,7 @@ const ChatPage = () => {
   });
 
   const filteredMessages = messages.filter(msg => 
-    msg.text.toLowerCase().includes(search.toLowerCase())
+    !search || (msg.text && msg.text.toLowerCase().includes(search.toLowerCase()))
   );
 
   const { mutate: sendMsg } = useMutation({
@@ -53,6 +53,36 @@ const ChatPage = () => {
       );
     },
   });
+
+  const { mutate: delMessage } = useMutation({
+    mutationFn: (messageId) => deleteMessage(messageId),
+    onSuccess: (deletedMessage) => {
+      queryClient.setQueryData(["messages", targetUserId], (old) =>
+        old.map(msg => msg._id === deletedMessage._id ? deletedMessage : msg)
+      );
+      toast.success("Message deleted");
+    },
+  });
+
+  // Mark messages as read when opening chat
+  useEffect(() => {
+    if (messages.length > 0) {
+      const hasUnread = messages.some(
+        msg => msg.senderId === targetUserId && !msg.readAt
+      );
+      if (hasUnread) {
+        markMessagesAsRead(targetUserId);
+        // Optimistically mark as read locally
+        queryClient.setQueryData(["messages", targetUserId], (old) =>
+          old.map(msg => 
+            msg.senderId === targetUserId && !msg.readAt 
+              ? { ...msg, readAt: new Date().toISOString() } 
+              : msg
+          )
+        );
+      }
+    }
+  }, [messages, targetUserId, queryClient]);
 
   const handleInputChange = (e) => {
     setMessage(e.target.value);
@@ -110,10 +140,35 @@ const ChatPage = () => {
     socket.on("newMessage", (newMessage) => {
       if (newMessage.senderId === targetUserId) {
         queryClient.setQueryData(["messages", targetUserId], (old) => [...old, newMessage]);
+        // Also immediately mark this new message as read since we are in the chat
+        markMessagesAsRead(targetUserId);
       }
     });
-    return () => socket.off("newMessage");
-  }, [targetUserId, queryClient]);
+
+    socket.on("messages-read", ({ readerId }) => {
+      if (readerId === targetUserId) {
+        queryClient.setQueryData(["messages", targetUserId], (old) =>
+          old.map(msg => 
+            msg.senderId === authUser?._id && !msg.readAt 
+              ? { ...msg, readAt: new Date().toISOString() } 
+              : msg
+          )
+        );
+      }
+    });
+
+    socket.on("message-deleted", (deletedMessage) => {
+      queryClient.setQueryData(["messages", targetUserId], (old) =>
+        old.map(msg => msg._id === deletedMessage._id ? deletedMessage : msg)
+      );
+    });
+
+    return () => {
+      socket.off("newMessage");
+      socket.off("messages-read");
+      socket.off("message-deleted");
+    };
+  }, [targetUserId, queryClient, authUser?._id]);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -163,52 +218,54 @@ const ChatPage = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {filteredMessages.map((msg) => (
           <div key={msg._id} className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"}`}>
-            <div className={`chat-bubble ${msg.text.includes("/call/") ? "bg-primary text-primary-content" : ""}`}>
-                {msg.text.includes("/call/") ? (
+            <div className={`chat-bubble ${msg.text?.includes("/call/") ? "bg-primary text-primary-content" : ""}`}>
+                {msg.text?.includes("/call/") ? (
                     <a href={msg.text.split(" ").pop()} className="underline font-bold">
                         {msg.text}
                     </a>
-                ) : msg.text}
-                {msg.image && <img src={msg.image} alt="image" className="mt-2 max-w-full rounded" />}
-                {msg.reactions && msg.reactions.length > 0 && (
-                  <div className="mt-2 flex gap-1">
-                    {msg.reactions.map((r, i) => (
-                      <span key={i} className="text-sm">{r.emoji}</span>
-                    ))}
-                  </div>
+                ) : (
+                    <span className={msg.isDeleted ? "italic opacity-60" : ""}>
+                      {msg.text}
+                    </span>
                 )}
+                {msg.image && <img src={msg.image} alt="image" className="mt-2 max-w-full rounded" />}
+                
+                <div className="flex justify-between items-end mt-1 gap-2">
+                  {/* Reactions */}
+                  {msg.reactions && msg.reactions.length > 0 ? (
+                    <div className="flex gap-1">
+                      {msg.reactions.map((r, i) => (
+                        <span key={i} className="text-xs bg-base-100 text-base-content rounded px-1">{r.emoji}</span>
+                      ))}
+                    </div>
+                  ) : <div />}
+
+                  {/* Read Receipts */}
+                  {msg.senderId === authUser._id && !msg.isDeleted && (
+                    <span className="text-[10px] opacity-70">
+                      {msg.readAt ? "✓✓" : "✓"}
+                    </span>
+                  )}
+                </div>
             </div>
-            <div className="flex gap-1">
-              <button 
-                onClick={() => reactToMessage({ messageId: msg._id, emoji: "👍" })}
-                className="btn btn-xs btn-ghost"
-              >
-                👍
-              </button>
-              <button 
-                onClick={() => reactToMessage({ messageId: msg._id, emoji: "❤️" })}
-                className="btn btn-xs btn-ghost"
-              >
-                ❤️
-              </button>
-              <button 
-                onClick={() => reactToMessage({ messageId: msg._id, emoji: "😂" })}
-                className="btn btn-xs btn-ghost"
-              >
-                😂
-              </button>
-              <button 
-                onClick={() => reactToMessage({ messageId: msg._id, emoji: "😮" })}
-                className="btn btn-xs btn-ghost"
-              >
-                😮
-              </button>
-              <button 
-                onClick={() => reactToMessage({ messageId: msg._id, emoji: "😢" })}
-                className="btn btn-xs btn-ghost"
-              >
-                😢
-              </button>
+            <div className="flex gap-1 items-center">
+              {!msg.isDeleted && (
+                <>
+                  <button onClick={() => reactToMessage({ messageId: msg._id, emoji: "👍" })} className="btn btn-xs btn-ghost px-1">👍</button>
+                  <button onClick={() => reactToMessage({ messageId: msg._id, emoji: "❤️" })} className="btn btn-xs btn-ghost px-1">❤️</button>
+                  <button onClick={() => reactToMessage({ messageId: msg._id, emoji: "😂" })} className="btn btn-xs btn-ghost px-1">😂</button>
+                  
+                  {msg.senderId === authUser._id && (
+                    <button 
+                      onClick={() => delMessage(msg._id)} 
+                      className="btn btn-xs btn-ghost text-error px-1 ml-2"
+                      title="Delete message"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         ))}

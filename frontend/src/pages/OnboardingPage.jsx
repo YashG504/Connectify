@@ -171,20 +171,30 @@ const OnboardingPage = () => {
             {/* Location */}
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Location</span>
+                <span className="label-text">Location (Maharashtra)</span>
               </label>
               <div className="relative">
                 <MapPinIcon className="absolute top-1/2 transform -translate-y-1/2 left-3 size-5 text-base-content opacity-70" />
-                <input
-                  type="text"
+                <select
                   name="location"
                   value={formState.location}
                   onChange={(e) =>
                     setFormState({ ...formState, location: e.target.value })
                   }
-                  className="input input-bordered w-full pl-10"
-                  placeholder="City, Country"
-                />
+                  className="select select-bordered w-full pl-10"
+                >
+                  <option value="">Select your city</option>
+                  {[
+                    "Ahmednagar", "Akola", "Amravati", "Bhiwandi", "Bhusawal", 
+                    "Chandrapur", "Chhatrapati Sambhajinagar", "Dhule", "Jalgaon", 
+                    "Jalna", "Kalyan-Dombivli", "Kolhapur", "Latur", "Mira-Bhayandar", 
+                    "Mumbai", "Nagpur", "Nanded", "Nashik", "Navi Mumbai", 
+                    "Panvel", "Parbhani", "Pune", "Solapur", "Thane", 
+                    "Ulhasnagar", "Vasai-Virar"
+                  ].map((city) => (
+                    <option key={city} value={city}>{city}, India</option>
+                  ))}
+                </select>
               </div>
             </div>
 

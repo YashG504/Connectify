@@ -8,6 +8,13 @@ const SOCKET_URL = import.meta.env.MODE === "development"
 export const socket = io(SOCKET_URL, {
   autoConnect: false, // Don't connect until the user is authenticated
   withCredentials: true,
+  // Reconnection settings for reliability
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  transports: ["websocket", "polling"], // Prefer WebSocket, fallback to polling
 });
 
 // Helper to connect with userId

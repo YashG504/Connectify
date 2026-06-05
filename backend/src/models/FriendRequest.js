@@ -14,7 +14,7 @@ const friendRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "accepted"],
+      enum: ["pending", "accepted", "rejected"],
       default: "pending",
     },
   },
@@ -22,6 +22,10 @@ const friendRequestSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Indexes for fast lookups
+friendRequestSchema.index({ sender: 1, recipient: 1 }, { unique: true }); // Prevent duplicate requests
+friendRequestSchema.index({ recipient: 1, status: 1 }); // Fast incoming request queries
 
 const FriendRequest = mongoose.model("FriendRequest", friendRequestSchema);
 

@@ -88,7 +88,11 @@ const NotificationsPage = () => {
                           onClick={() => acceptRequestMutation(request._id)}
                           disabled={isPending}
                         >
-                          {isPending ? <span className="loading loading-spinner loading-xs"></span> : "Accept"}
+                          {isPending && acceptRequestMutation.variables === request._id ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                          ) : (
+                            "Accept"
+                          )}
                         </button>
                       </div>
                     </div>
@@ -108,28 +112,38 @@ const NotificationsPage = () => {
 
               <div className="space-y-3">
                 {acceptedRequests.map((notification) => (
-                  <div key={notification._id} className="card bg-base-100 border border-base-300 shadow-sm">
+                  <div key={notification._id} className="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-all">
                     <div className="card-body p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="avatar mt-1 size-10 rounded-full overflow-hidden">
+                      <div className="flex items-start gap-4">
+                        <div className="avatar mt-1 size-12 rounded-full overflow-hidden">
                           <img
                             src={notification.recipient.profilePic || "/avatar.png"}
                             alt={notification.recipient.fullName}
                           />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-semibold">{notification.recipient.fullName}</h3>
+                          <h3 className="font-semibold text-lg">{notification.recipient.fullName}</h3>
                           <p className="text-sm my-1 opacity-80">
-                            {notification.recipient.fullName} accepted your friend request. You can now start chatting!
+                            {notification.recipient.fullName} accepted your friend request.
                           </p>
                           <p className="text-xs flex items-center opacity-60">
                             <ClockIcon className="h-3 w-3 mr-1" />
                             Recently
                           </p>
                         </div>
-                        <div className="badge badge-success badge-outline gap-1">
-                          <MessageSquareIcon className="h-3 w-3" />
-                          Connected
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="badge badge-success badge-outline gap-1">
+                            <UserCheckIcon className="h-3 w-3" />
+                            Connected
+                          </div>
+                          {/* SMART UI: Button to instantly message the new connection */}
+                          <a 
+                            href={`/chat/${notification.recipient._id}`} 
+                            className="btn btn-primary btn-sm rounded-full shadow-sm"
+                          >
+                            <MessageSquareIcon className="h-4 w-4 mr-1" />
+                            Message
+                          </a>
                         </div>
                       </div>
                     </div>

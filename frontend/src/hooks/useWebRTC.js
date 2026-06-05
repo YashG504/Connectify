@@ -2,6 +2,32 @@ import { useEffect, useRef, useState } from "react";
 import Peer from "simple-peer";
 import { socket } from "../lib/socket";
 
+/**
+ * ICE Server Configuration with TURN servers.
+ * Required for real-world WebRTC connections behind NATs/firewalls.
+ */
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+  ],
+};
+
 export const useWebRTC = (receiverId, authUser) => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -31,12 +57,11 @@ export const useWebRTC = (receiverId, authUser) => {
 
   const startCall = () => {
     setIsCalling(true);
-    // CHANGE: set trickle to true for faster, more reliable connections
     const peer = new Peer({ 
       initiator: true, 
       trickle: true, 
       stream: localStream,
-      config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] } // Help bypass firewalls
+      config: ICE_SERVERS,
     });
 
     peer.on("signal", (data) => {
@@ -47,13 +72,16 @@ export const useWebRTC = (receiverId, authUser) => {
           fromName: authUser.fullName 
         });
       } else {
-        // This is where the ICE Candidate data is sent to the other person
         socket.emit("ice-candidate", { to: receiverId, candidate: data });
       }
     });
 
     peer.on("stream", (stream) => {
       setRemoteStream(stream);
+    });
+
+    peer.on("error", (err) => {
+      console.error("Peer connection error:", err);
     });
 
     socket.on("call-accepted", ({ answer }) => {
@@ -65,8 +93,17 @@ export const useWebRTC = (receiverId, authUser) => {
   };
 
   const endCall = () => {
-    connectionRef.current?.destroy();
-    window.location.reload(); 
+    if (connectionRef.current) {
+      connectionRef.current.destroy();
+      connectionRef.current = null;
+    }
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    setCallAccepted(false);
+    setIsCalling(false);
+    setLocalStream(null);
+    setRemoteStream(null);
   };
 
   return { localStream, remoteStream, callAccepted, isCalling, startCall, endCall };

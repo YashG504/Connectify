@@ -11,6 +11,7 @@ import NotificationsPage from "./pages/NotificationsPage.jsx";
 import CallPage from "./pages/CallPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import OnboardingPage from "./pages/OnboardingPage.jsx";
+import ChannelPage from "./pages/ChannelPage.jsx";
 
 // Components & Hooks
 import PageLoader from "./components/PageLoader.jsx";
@@ -179,6 +180,19 @@ const App = () => {
             isAuthenticated && isOnboarded ? (
               <Layout showSidebar={false}>
                 <ChatPage />
+              </Layout>
+            ) : (
+              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+            )
+          }
+        />
+
+        <Route
+          path="/channel/:id"
+          element={
+            isAuthenticated && isOnboarded ? (
+              <Layout showSidebar={false}>
+                <ChannelPage />
               </Layout>
             ) : (
               <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />

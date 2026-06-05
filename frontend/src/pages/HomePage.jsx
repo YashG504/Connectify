@@ -129,7 +129,13 @@ const HomePage = () => {
                         onClick={() => sendRequestMutation(user._id)}
                         disabled={hasRequestBeenSent || isPending}
                       >
-                        {hasRequestBeenSent ? "Sent" : "Connect"}
+                        {isPending && sendRequestMutation.variables === user._id ? (
+                          <span className="loading loading-spinner loading-sm"></span>
+                        ) : hasRequestBeenSent ? (
+                          "Sent"
+                        ) : (
+                          "Connect"
+                        )}
                       </button>
                     </div>
                   </div>

@@ -56,6 +56,47 @@ export const uploadImage = async (file) => {
   return response.data;
 };
 
+export const markMessagesAsRead = async (userId) => {
+  const response = await axiosInstance.put(`/chat/read/${userId}`);
+  return response.data;
+};
+
+export const deleteMessage = async (messageId) => {
+  const response = await axiosInstance.delete(`/chat/message/${messageId}`);
+  return response.data;
+};
+
+// --- CHANNELS ROUTES ---
+export const getChannels = async () => {
+  const response = await axiosInstance.get("/channels");
+  return response.data;
+};
+
+export const createChannel = async (channelData) => {
+  const response = await axiosInstance.post("/channels", channelData);
+  return response.data;
+};
+
+export const joinChannel = async (channelId) => {
+  const response = await axiosInstance.post(`/channels/${channelId}/join`);
+  return response.data;
+};
+
+export const inviteToChannel = async (channelId, userId) => {
+  const response = await axiosInstance.post(`/channels/${channelId}/invite`, { userId });
+  return response.data;
+};
+
+export const getChannelMessages = async (channelId) => {
+  const response = await axiosInstance.get(`/channels/${channelId}/messages`);
+  return response.data;
+};
+
+export const sendChannelMessage = async (channelId, messageData) => {
+  const response = await axiosInstance.post(`/channels/${channelId}/messages`, messageData);
+  return response.data;
+};
+
 // --- USER & PROFILE ROUTES ---
 export const getUserProfile = async (userId) => {
   const response = await axiosInstance.get(`/users/profile/${userId}`);

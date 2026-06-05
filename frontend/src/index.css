@@ -1,34 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-.str-chat__channel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(to bottom, #c9e8c9, #b7e7bb);
-  height: 100%;
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply bg-base-100 text-base-content antialiased selection:bg-primary/30 selection:text-primary;
+  }
 }
 
-.str-chat__container {
-  max-width: 1200px;
-  width: 100%;
-  height: 80% !important;
-  margin: 0 auto !important;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-base-300 rounded-full hover:bg-primary/50 transition-colors;
 }
 
-.str-chat__list {
-  background-color: #ffffff;
-  padding: 12px;
+@layer utilities {
+  .glass-panel {
+    @apply bg-base-100/70 backdrop-blur-md border border-white/10 shadow-xl;
+  }
+  
+  .glass-panel-dark {
+    @apply bg-black/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent;
+  }
+
+  /* Micro-interactions */
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20;
+  }
 }
 
-.str-chat__list-notifications {
-  display: none;
+/* Base Animations */
+.btn {
+  @apply transition-all duration-300 active:scale-95;
 }
 
-.str-chat__message-input {
-  border-top: 1px solid #ddd;
+.card {
+  @apply transition-all duration-300 hover:border-primary/20;
 }
