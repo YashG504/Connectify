@@ -95,11 +95,13 @@ export const onboardingValidation = [
     .isLength({ max: 500 })
     .withMessage("Bio cannot exceed 500 characters")
     .escape(),
-  body("nativeLanguage")
+  body("jobTitle")
     .optional()
     .trim()
+    .isLength({ max: 50 })
+    .withMessage("Job title cannot exceed 50 characters")
     .escape(),
-  body("learningLanguage")
+  body("preferredLanguage")
     .optional()
     .trim()
     .escape(),

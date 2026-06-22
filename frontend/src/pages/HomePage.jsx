@@ -105,8 +105,8 @@ const HomePage = () => {
 
         <section>
           <div className="mb-6 sm:mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Meet New Learners</h2>
-            <p className="opacity-70">Discover perfect language exchange partners</p>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Discover People</h2>
+            <p className="opacity-70">Connect with new people and grow your network</p>
           </div>
 
           {loadingUsers ? (
@@ -125,7 +125,7 @@ const HomePage = () => {
                         <h3 className="font-semibold text-lg">{user.fullName}</h3>
                       </div>
                       <button
-                        className={`btn w-full mt-2 ${hasRequestBeenSent ? "btn-disabled" : "btn-primary"}`}
+                        className={`btn w-full mt-2 ${hasRequestBeenSent ? "btn-disabled" : "btn-primary"} rounded-full`}
                         onClick={() => sendRequestMutation(user._id)}
                         disabled={hasRequestBeenSent || isPending}
                       >

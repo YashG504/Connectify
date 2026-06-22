@@ -10,7 +10,7 @@ const messageSchema = new mongoose.Schema(
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false, // Now optional because of channelId
+      required: false,
     },
     channelId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -23,6 +23,13 @@ const messageSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+    },
+    // File sharing (non-image): PDFs, docs, etc.
+    file: {
+      url: { type: String },
+      name: { type: String },
+      size: { type: Number },
+      type: { type: String }, // MIME type
     },
     reactions: [
       {
@@ -37,6 +44,30 @@ const messageSchema = new mongoose.Schema(
     isDeleted: {
       type: Boolean,
       default: false,
+    },
+    // Thread / Reply support
+    parentMessageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
+    threadCount: {
+      type: Number,
+      default: 0,
+    },
+    // Message pinning
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
+    pinnedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    pinnedAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }
@@ -53,10 +84,14 @@ messageSchema.pre("validate", function(next) {
   }
 });
 
-// Compound index for faster chat history queries (getMessages uses $or on these)
+// Compound index for faster chat history queries
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: 1 });
 messageSchema.index({ receiverId: 1, senderId: 1, createdAt: 1 });
-messageSchema.index({ channelId: 1, createdAt: 1 }); // Index for fast channel message retrieval
+messageSchema.index({ channelId: 1, createdAt: 1 });
+// Index for thread queries
+messageSchema.index({ parentMessageId: 1, createdAt: 1 });
+// Index for text search
+messageSchema.index({ text: "text" });
 
 const Message = mongoose.model("Message", messageSchema);
 

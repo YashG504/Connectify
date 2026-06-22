@@ -25,13 +25,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    nativeLanguage: {
+    jobTitle: {
       type: String,
       default: "",
     },
-    learningLanguage: {
+    preferredLanguage: {
+      type: String,
+      default: "english",
+    },
+    status: {
+      type: String,
+      enum: ["online", "away", "busy", "offline"],
+      default: "online",
+    },
+    customStatus: {
       type: String,
       default: "",
+      maxlength: 80,
+    },
+    lastSeen: {
+      type: Date,
+      default: null,
     },
     location: {
       type: String,

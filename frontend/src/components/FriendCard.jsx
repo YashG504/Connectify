@@ -40,14 +40,17 @@ const FriendCard = ({ friend, unreadCount }) => {
         </div>
 
         <div className="flex flex-wrap gap-1.5 mb-3">
-          <span className="badge badge-secondary text-xs">
-            {getLanguageFlag(friend.nativeLanguage)}
-            Native: {friend.nativeLanguage}
-          </span>
-          <span className="badge badge-outline text-xs">
-            {getLanguageFlag(friend.learningLanguage)}
-            Learning: {friend.learningLanguage}
-          </span>
+          {friend.jobTitle && (
+            <span className="badge badge-secondary text-xs">
+              {friend.jobTitle}
+            </span>
+          )}
+          {friend.preferredLanguage && (
+            <span className="badge badge-outline text-xs">
+              {getLanguageFlag(friend.preferredLanguage)}
+              {friend.preferredLanguage.charAt(0).toUpperCase() + friend.preferredLanguage.slice(1)}
+            </span>
+          )}
         </div>
 
         <Link to={`/chat/${friend._id}`} className="btn btn-outline w-full relative">

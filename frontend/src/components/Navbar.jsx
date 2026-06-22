@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../lib/axios"; // Ensure this path is correct
 import useAuthUser from "../hooks/useAuthUser";
 import useLogout from "../hooks/useLogout";
-import { BellIcon, LogOutIcon, ShipWheelIcon, MapPinIcon, LanguagesIcon, PenIcon, CheckIcon, XIcon } from "lucide-react";
+import { BellIcon, LogOutIcon, ShipWheelIcon, MapPinIcon, LanguagesIcon, BriefcaseIcon, PenIcon, CheckIcon, XIcon, ActivityIcon } from "lucide-react";
 import ThemeSelector from "./ThemeSelector";
 import { LANGUAGES } from "../constants"; // Ensure this exists
 
@@ -34,19 +34,41 @@ const Navbar = () => {
     },
   });
 
+  const { mutate: updateStatusMutation } = useMutation({
+    mutationFn: async (data) => {
+      const res = await axiosInstance.put("/users/status", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+    },
+  });
+
   const handleEdit = () => {
     setFormData({
       fullName: userData?.fullName || "",
       bio: userData?.bio || "",
       location: userData?.location || "",
-      nativeLanguage: userData?.nativeLanguage || "",
-      learningLanguage: userData?.learningLanguage || "",
+      jobTitle: userData?.jobTitle || "",
+      preferredLanguage: userData?.preferredLanguage || "",
+      status: userData?.status || "online",
+      customStatus: userData?.customStatus || "",
     });
     setIsEditing(true);
   };
 
   const handleSave = () => {
-    updateProfile(formData);
+    updateProfile({
+      fullName: formData.fullName,
+      bio: formData.bio,
+      location: formData.location,
+      jobTitle: formData.jobTitle,
+      preferredLanguage: formData.preferredLanguage,
+    });
+    updateStatusMutation({
+      status: formData.status,
+      customStatus: formData.customStatus,
+    });
   };
 
   const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : "N/A";
@@ -141,14 +163,23 @@ const Navbar = () => {
                       <div><p className="text-xs opacity-50">Location</p><p className="font-medium">{userData?.location || "Unknown"}</p></div>
                    </div>
                    <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
-                      <LanguagesIcon className="size-5 text-primary" />
-                      <div className="flex-1">
-                        <p className="text-xs opacity-50">Languages</p>
-                        <div className="flex gap-2 mt-1">
-                           <span className="badge badge-success badge-sm">Native: {capitalize(userData?.nativeLanguage)}</span>
-                           <span className="badge badge-info badge-sm">Learning: {capitalize(userData?.learningLanguage)}</span>
-                        </div>
+                      <ActivityIcon className="size-5 text-primary" />
+                      <div>
+                        <p className="text-xs opacity-50">Status</p>
+                        <p className="font-medium flex items-center gap-2">
+                          <span className={`size-2 rounded-full ${userData?.status === 'online' ? 'bg-success' : userData?.status === 'away' ? 'bg-warning' : userData?.status === 'busy' ? 'bg-error' : 'bg-base-300'}`}></span>
+                          {capitalize(userData?.status || "online")}
+                          {userData?.customStatus && <span className="opacity-70 text-sm ml-1">- "{userData?.customStatus}"</span>}
+                        </p>
                       </div>
+                   </div>
+                   <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+                      <BriefcaseIcon className="size-5 text-primary" />
+                      <div><p className="text-xs opacity-50">Role</p><p className="font-medium">{userData?.jobTitle || "Not specified"}</p></div>
+                   </div>
+                   <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+                      <LanguagesIcon className="size-5 text-primary" />
+                      <div><p className="text-xs opacity-50">Preferred Language</p><p className="font-medium">{capitalize(userData?.preferredLanguage)}</p></div>
                    </div>
                    <div className="p-3 bg-base-200 rounded-lg w-full">
                       <p className="text-xs opacity-50 mb-1">About Me</p>
@@ -161,13 +192,19 @@ const Navbar = () => {
               <div className="w-full space-y-3 mt-2">
                  <input type="text" className="input input-bordered input-sm w-full" value={formData.fullName} onChange={(e)=>setFormData({...formData, fullName: e.target.value})} placeholder="Full Name" />
                  <input type="text" className="input input-bordered input-sm w-full" value={formData.location} onChange={(e)=>setFormData({...formData, location: e.target.value})} placeholder="City, Country" />
-                 <div className="grid grid-cols-2 gap-2">
-                    <select className="select select-bordered select-sm" value={formData.nativeLanguage} onChange={(e)=>setFormData({...formData, nativeLanguage: e.target.value})}>
-                       {LANGUAGES?.map(l=><option key={l} value={l.toLowerCase()}>{l}</option>)}
-                    </select>
-                    <select className="select select-bordered select-sm" value={formData.learningLanguage} onChange={(e)=>setFormData({...formData, learningLanguage: e.target.value})}>
-                       {LANGUAGES?.map(l=><option key={l} value={l.toLowerCase()}>{l}</option>)}
-                    </select>
+                 <input type="text" className="input input-bordered input-sm w-full" value={formData.jobTitle} onChange={(e)=>setFormData({...formData, jobTitle: e.target.value})} placeholder="Job Title / Role" />
+                 <select className="select select-bordered select-sm w-full" value={formData.preferredLanguage} onChange={(e)=>setFormData({...formData, preferredLanguage: e.target.value})}>
+                    <option value="">Select Preferred Language</option>
+                    {LANGUAGES?.map(l=><option key={l} value={l.toLowerCase()}>{l}</option>)}
+                 </select>
+                 <div className="grid grid-cols-1 gap-2">
+                   <select className="select select-bordered select-sm w-full" value={formData.status} onChange={(e)=>setFormData({...formData, status: e.target.value})}>
+                      <option value="online">🟢 Online</option>
+                      <option value="away">🟡 Away</option>
+                      <option value="busy">🔴 Busy</option>
+                      <option value="offline">⚪ Offline</option>
+                   </select>
+                   <input type="text" className="input input-bordered input-sm w-full" value={formData.customStatus} onChange={(e)=>setFormData({...formData, customStatus: e.target.value})} placeholder="What's your status? (e.g. In a meeting)" maxLength={80} />
                  </div>
                  <textarea className="textarea textarea-bordered h-20 w-full" value={formData.bio} onChange={(e)=>setFormData({...formData, bio: e.target.value})} placeholder="Bio"></textarea>
               </div>

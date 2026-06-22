@@ -4,12 +4,11 @@ import { getReceiverSocketId, io } from "../lib/socket.js";
 import cloudinary from "../lib/cloudinary.js";
 import multer from "multer";
 
-// Configure multer to use memory storage (buffer) instead of disk
-// The buffer is then uploaded directly to Cloudinary — no local files needed
+// Configure multer to use memory storage
 const storage = multer.memoryStorage();
 
-// File filter: Only allow image uploads (prevents RCE via malicious file uploads)
-const fileFilter = (req, file, cb) => {
+// File filter: allow images and common document types
+const imageFilter = (req, file, cb) => {
   const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -18,12 +17,38 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const fileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "text/plain",
+    "text/csv",
+    "application/zip",
+    "application/x-rar-compressed",
+  ];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Unsupported file type"), false);
+  }
+};
+
 const upload = multer({
   storage,
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+const uploadFile = multer({
+  storage,
   fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
-  },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for files
 });
 
 // 1. Get List of Users for Sidebar
@@ -49,6 +74,7 @@ export const getMessages = async (req, res) => {
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
+      parentMessageId: null, // Only top-level messages, not thread replies
     }).sort({ createdAt: 1 });
 
     res.status(200).json(messages);
@@ -61,7 +87,7 @@ export const getMessages = async (req, res) => {
 // 3. Send Message and Emit via Socket.io
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text, image, parentMessageId } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -70,8 +96,6 @@ export const sendMessage = async (req, res) => {
     }
 
     let imageUrl = null;
-
-    // If image is a base64 string, upload to Cloudinary
     if (image) {
       const uploadResult = await cloudinary.uploader.upload(image, {
         folder: "connectify/chat",
@@ -85,11 +109,17 @@ export const sendMessage = async (req, res) => {
       receiverId,
       text,
       image: imageUrl,
+      parentMessageId: parentMessageId || null,
     });
 
     await newMessage.save();
 
-    // REAL-TIME LOGIC: Send to receiver if they are online
+    // If this is a thread reply, increment the parent's threadCount
+    if (parentMessageId) {
+      await Message.findByIdAndUpdate(parentMessageId, { $inc: { threadCount: 1 } });
+    }
+
+    // REAL-TIME LOGIC
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
@@ -138,11 +168,10 @@ export const addReaction = async (req, res) => {
 };
 
 // 5. Upload Image to Cloudinary (via multer memory buffer)
-export const uploadImage = async (req, res) => {
+export const uploadImageHandler = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    // Convert buffer to base64 data URI for Cloudinary upload
     const b64 = Buffer.from(req.file.buffer).toString("base64");
     const dataURI = `data:${req.file.mimetype};base64,${b64}`;
 
@@ -158,6 +187,31 @@ export const uploadImage = async (req, res) => {
   }
 };
 
+// 5b. Upload File (non-image) to Cloudinary
+export const uploadFileHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const b64 = Buffer.from(req.file.buffer).toString("base64");
+    const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+    const uploadResult = await cloudinary.uploader.upload(dataURI, {
+      folder: "connectify/files",
+      resource_type: "auto",
+    });
+
+    res.status(200).json({
+      fileUrl: uploadResult.secure_url,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      fileType: req.file.mimetype,
+    });
+  } catch (error) {
+    console.error("Error in uploadFile:", error.message);
+    res.status(500).json({ error: "Failed to upload file" });
+  }
+};
+
 // 6. Mark messages as read
 export const markMessagesAsRead = async (req, res) => {
   try {
@@ -169,7 +223,6 @@ export const markMessagesAsRead = async (req, res) => {
       { $set: { readAt: new Date() } }
     );
 
-    // Notify the sender that their messages were read
     const senderSocketId = getReceiverSocketId(senderId);
     if (senderSocketId) {
       io.to(senderSocketId).emit("messages-read", { readerId: receiverId });
@@ -191,19 +244,17 @@ export const deleteMessage = async (req, res) => {
     const message = await Message.findById(messageId);
     if (!message) return res.status(404).json({ error: "Message not found" });
 
-    // Ensure only the sender can delete the message
     if (message.senderId.toString() !== userId.toString()) {
       return res.status(403).json({ error: "Unauthorized to delete this message" });
     }
 
-    // Instead of deleting the record, soft-delete it so it still shows "This message was deleted"
     message.text = "This message was deleted";
     message.image = null;
+    message.file = null;
     message.isDeleted = true;
-    message.reactions = []; // clear reactions
+    message.reactions = [];
     await message.save();
 
-    // Notify both users in real-time
     const receiverSocketId = getReceiverSocketId(message.receiverId);
     const senderSocketId = getReceiverSocketId(message.senderId);
     
@@ -217,4 +268,178 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
-export { upload };
+// 8. Pin / Unpin message
+export const pinMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ error: "Message not found" });
+
+    message.isPinned = !message.isPinned;
+    message.pinnedBy = message.isPinned ? userId : null;
+    message.pinnedAt = message.isPinned ? new Date() : null;
+    await message.save();
+
+    // Notify both users
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+    const senderSocketId = getReceiverSocketId(message.senderId);
+    const pinEvent = { messageId, isPinned: message.isPinned, pinnedBy: userId };
+    if (receiverSocketId) io.to(receiverSocketId).emit("message-pinned", pinEvent);
+    if (senderSocketId) io.to(senderSocketId).emit("message-pinned", pinEvent);
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Error in pinMessage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// 9. Get pinned messages for a conversation
+export const getPinnedMessages = async (req, res) => {
+  try {
+    const { id: otherUserId } = req.params;
+    const myId = req.user._id;
+
+    const pinned = await Message.find({
+      $or: [
+        { senderId: myId, receiverId: otherUserId },
+        { senderId: otherUserId, receiverId: myId },
+      ],
+      isPinned: true,
+      isDeleted: false,
+    }).sort({ pinnedAt: -1 });
+
+    res.status(200).json(pinned);
+  } catch (error) {
+    console.error("Error in getPinnedMessages:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// 10. Get thread replies for a parent message
+export const getThreadReplies = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+
+    const replies = await Message.find({ parentMessageId: messageId })
+      .populate("senderId", "fullName profilePic")
+      .sort({ createdAt: 1 });
+
+    res.status(200).json(replies);
+  } catch (error) {
+    console.error("Error in getThreadReplies:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// 11. Global message search
+export const searchMessages = async (req, res) => {
+  try {
+    const { q } = req.query;
+    const myId = req.user._id;
+
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({ error: "Search query must be at least 2 characters" });
+    }
+
+    const messages = await Message.find({
+      $or: [
+        { senderId: myId },
+        { receiverId: myId },
+      ],
+      text: { $regex: q, $options: "i" },
+      isDeleted: false,
+    })
+      .populate("senderId", "fullName profilePic")
+      .populate("receiverId", "fullName profilePic")
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error("Error in searchMessages:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// 12. Get friends with last message (for sidebar DM preview)
+export const getFriendsWithLastMessage = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select("friends")
+      .populate("friends", "fullName profilePic jobTitle preferredLanguage status customStatus lastSeen");
+
+    const friendsWithLastMsg = await Promise.all(
+      user.friends.map(async (friend) => {
+        const lastMessage = await Message.findOne({
+          $or: [
+            { senderId: req.user._id, receiverId: friend._id },
+            { senderId: friend._id, receiverId: req.user._id },
+          ],
+          parentMessageId: null,
+        })
+          .sort({ createdAt: -1 })
+          .select("text image file createdAt senderId isDeleted")
+          .lean();
+
+        // Count unread
+        const unreadCount = await Message.countDocuments({
+          senderId: friend._id,
+          receiverId: req.user._id,
+          readAt: null,
+          parentMessageId: null,
+        });
+
+        return {
+          ...friend.toObject(),
+          lastMessage: lastMessage || null,
+          unreadCount,
+        };
+      })
+    );
+
+    // Sort by most recent message
+    friendsWithLastMsg.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt || 0;
+      const bTime = b.lastMessage?.createdAt || 0;
+      return new Date(bTime) - new Date(aTime);
+    });
+
+    res.status(200).json(friendsWithLastMsg);
+  } catch (error) {
+    console.error("Error in getFriendsWithLastMessage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// 13. Send message with file attachment
+export const sendFileMessage = async (req, res) => {
+  try {
+    const { id: receiverId } = req.params;
+    const senderId = req.user._id;
+    const { text, fileUrl, fileName, fileSize, fileType } = req.body;
+
+    const newMessage = new Message({
+      senderId,
+      receiverId,
+      text: text || null,
+      file: fileUrl ? { url: fileUrl, name: fileName, size: fileSize, type: fileType } : undefined,
+    });
+
+    await newMessage.save();
+
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    console.error("Error in sendFileMessage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export { upload, uploadFile };

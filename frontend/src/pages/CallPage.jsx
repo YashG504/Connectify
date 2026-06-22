@@ -57,6 +57,7 @@ const CallPage = () => {
   const connectionRef = useRef(null);
   const endCallRef = useRef();
   const timerRef = useRef(null);
+  const streamRef = useRef(null);
 
   const { data: receiverProfile, isLoading: loadingProfile } = useQuery({
     queryKey: ["userProfile", receiverId],
@@ -96,6 +97,7 @@ const CallPage = () => {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then((s) => {
         setStream(s);
+        streamRef.current = s;
         if (myVideo.current) myVideo.current.srcObject = s;
       })
       .catch((err) => {
@@ -103,10 +105,10 @@ const CallPage = () => {
         toast.error("Camera/Microphone access denied. Please grant permissions.");
       });
 
-    // Cleanup: stop all tracks when component unmounts
+    // Cleanup: use ref to get the latest stream
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, []);

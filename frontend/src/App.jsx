@@ -26,7 +26,7 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation(); // Required to detect the current page
   const queryClient = useQueryClient();
-  const { addOnlineUser, removeOnlineUser } = useThemeStore();
+  const { setOnlineUsers } = useThemeStore();
 
   const isAuthenticated = Boolean(authUser);
   const isOnboarded = authUser?.isOnboarded;
@@ -38,14 +38,19 @@ const App = () => {
     // Listen for friend requests
     socket.on("friend-request", () => {
       queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["friendsDM"] });
     });
-    // Listen for online status
-    socket.on("user-online", (userId) => {
-      addOnlineUser(userId);
+
+    // Sync online users from the list the backend emits on every connect/disconnect
+    socket.on("getOnlineUsers", (userIds) => {
+      setOnlineUsers(userIds);
     });
-    socket.on("user-offline", (userId) => {
-      removeOnlineUser(userId);
+
+    // Refresh sidebar DM previews on any new message (global listener)
+    socket.on("newMessage", () => {
+      queryClient.invalidateQueries({ queryKey: ["friendsDM"] });
     });
+
     // Listen for calls from other users via custom WebSockets
     socket.on("incoming-call", ({ from, fromName }) => {
       
@@ -90,12 +95,12 @@ const App = () => {
 
     return () => {
       socket.off("friend-request");
-      socket.off("user-online");
-      socket.off("user-offline");
+      socket.off("getOnlineUsers");
       socket.off("incoming-call");
       socket.off("call-accepted");
       socket.off("ice-candidate");
       socket.off("call-rejected");
+      socket.off("newMessage");
     };
   }, [navigate, location.pathname, isAuthenticated]); // Re-run when location changes
 

@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import Channel from "../models/Channel.js";
+import User from "../models/User.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -19,13 +20,12 @@ const io = new Server(server, {
     credentials: true,
     methods: ["GET", "POST"]
   },
-  // Connection reliability settings
-  pingTimeout: 60000,      // How long to wait for a pong response
-  pingInterval: 25000,     // How often to send a ping
-  transports: ["websocket", "polling"], // Prefer WebSocket, fallback to polling
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ["websocket", "polling"],
 });
 
-// In-memory socket map (Since we are dropping Redis to save disk space)
+// In-memory socket map
 const userSocketMap = {};
 
 export const getReceiverSocketId = (userId) => {
@@ -40,7 +40,7 @@ io.on("connection", async (socket) => {
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
     console.log(`User connected: ${userId} (socket: ${socket.id})`);
 
-    // --- PHASE 3: Subscribe to all channels the user is a member of ---
+    // Subscribe to all channels the user is a member of
     try {
       const userChannels = await Channel.find({ members: userId });
       userChannels.forEach(channel => {
@@ -89,10 +89,16 @@ io.on("connection", async (socket) => {
   });
 
   // --- DISCONNECT ---
-  socket.on("disconnect", (reason) => {
+  socket.on("disconnect", async (reason) => {
     if (userId) {
       delete userSocketMap[userId];
       console.log(`User disconnected: ${userId} (reason: ${reason})`);
+      // Save lastSeen timestamp
+      try {
+        await User.findByIdAndUpdate(userId, { lastSeen: new Date() });
+      } catch (err) {
+        console.error("Error updating lastSeen:", err);
+      }
     }
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });

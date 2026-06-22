@@ -142,7 +142,7 @@ export async function refreshAccessToken(req, res) {
 // 6. ONBOARD
 export async function onboard(req, res) {
   try {
-    const allowedFields = ["fullName", "bio", "nativeLanguage", "learningLanguage", "location", "profilePic"];
+    const allowedFields = ["fullName", "bio", "jobTitle", "preferredLanguage", "location", "profilePic"];
     const updates = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
@@ -176,7 +176,7 @@ export async function onboard(req, res) {
 // 7. UPDATE PROFILE
 export const updateProfile = async (req, res) => {
   try {
-    const allowedFields = ["fullName", "bio", "nativeLanguage", "learningLanguage", "location", "profilePic"];
+    const allowedFields = ["fullName", "bio", "jobTitle", "preferredLanguage", "location", "profilePic"];
     const updates = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {

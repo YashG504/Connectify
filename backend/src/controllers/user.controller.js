@@ -42,7 +42,7 @@ export async function getMyFriends(req, res) {
   try {
     const user = await User.findById(req.user.id)
       .select("friends")
-      .populate("friends", "fullName profilePic nativeLanguage learningLanguage");
+      .populate("friends", "fullName profilePic jobTitle preferredLanguage");
 
     res.status(200).json(user.friends);
   } catch (error) {
@@ -136,7 +136,7 @@ export async function getFriendRequests(req, res) {
     const incomingReqs = await FriendRequest.find({
       recipient: req.user.id,
       status: "pending",
-    }).populate("sender", "fullName profilePic nativeLanguage learningLanguage");
+    }).populate("sender", "fullName profilePic jobTitle preferredLanguage");
 
     const acceptedReqs = await FriendRequest.find({
       sender: req.user.id,
@@ -155,11 +155,38 @@ export async function getOutgoingFriendReqs(req, res) {
     const outgoingRequests = await FriendRequest.find({
       sender: req.user.id,
       status: "pending",
-    }).populate("recipient", "fullName profilePic nativeLanguage learningLanguage");
+    }).populate("recipient", "fullName profilePic jobTitle preferredLanguage");
 
     res.status(200).json(outgoingRequests);
   } catch (error) {
     console.log("Error in getOutgoingFriendReqs controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Update user status
+export async function updateStatus(req, res) {
+  try {
+    const { status, customStatus } = req.body;
+
+    const allowedStatuses = ["online", "away", "busy", "offline"];
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const updates = {};
+    if (status) updates.status = status;
+    if (customStatus !== undefined) updates.customStatus = customStatus;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      updates,
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error("Error in updateStatus controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }

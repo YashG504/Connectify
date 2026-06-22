@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ShipWheelIcon } from "lucide-react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 import useLogin from "../hooks/useLogin";
 
 const LoginPage = () => {
@@ -57,7 +57,7 @@ const LoginPage = () => {
                 <div>
                   <h2 className="text-xl font-semibold">Welcome Back</h2>
                   <p className="text-sm opacity-70">
-                    Sign in to your account to continue your language journey
+                    Sign in to your account to continue
                   </p>
                 </div>
 
@@ -124,9 +124,9 @@ const LoginPage = () => {
             </div>
 
             <div className="text-center space-y-3 mt-6">
-              <h2 className="text-xl font-semibold">Connect with language partners worldwide</h2>
+              <h2 className="text-xl font-semibold">Chat, call, and collaborate — all in one place</h2>
               <p className="opacity-70">
-                Practice conversations, make friends, and improve your language skills together
+                Real-time messaging, video calls, and AI-powered features for modern teams and communities
               </p>
             </div>
           </div>

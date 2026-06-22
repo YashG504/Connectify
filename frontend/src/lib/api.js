@@ -31,7 +31,7 @@ export const completeOnboarding = async (userData) => {
   return response.data;
 };
 
-// --- CHAT ROUTES (Socket.io Backend) ---
+// --- CHAT ROUTES ---
 export const getMessages = async (userId) => {
   const response = await axiosInstance.get(`/chat/${userId}`);
   return response.data;
@@ -39,6 +39,11 @@ export const getMessages = async (userId) => {
 
 export const sendMessage = async (userId, messageData) => {
   const response = await axiosInstance.post(`/chat/send/${userId}`, messageData);
+  return response.data;
+};
+
+export const sendFileMessage = async (userId, messageData) => {
+  const response = await axiosInstance.post(`/chat/send-file/${userId}`, messageData);
   return response.data;
 };
 
@@ -56,6 +61,15 @@ export const uploadImage = async (file) => {
   return response.data;
 };
 
+export const uploadFile = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await axiosInstance.post("/chat/upload-file", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
 export const markMessagesAsRead = async (userId) => {
   const response = await axiosInstance.put(`/chat/read/${userId}`);
   return response.data;
@@ -63,6 +77,31 @@ export const markMessagesAsRead = async (userId) => {
 
 export const deleteMessage = async (messageId) => {
   const response = await axiosInstance.delete(`/chat/message/${messageId}`);
+  return response.data;
+};
+
+export const pinMessage = async (messageId) => {
+  const response = await axiosInstance.put(`/chat/pin/${messageId}`);
+  return response.data;
+};
+
+export const getPinnedMessages = async (userId) => {
+  const response = await axiosInstance.get(`/chat/pinned/${userId}`);
+  return response.data;
+};
+
+export const getThreadReplies = async (messageId) => {
+  const response = await axiosInstance.get(`/chat/thread/${messageId}`);
+  return response.data;
+};
+
+export const searchMessages = async (query) => {
+  const response = await axiosInstance.get(`/chat/search?q=${encodeURIComponent(query)}`);
+  return response.data;
+};
+
+export const getFriendsWithLastMessage = async () => {
+  const response = await axiosInstance.get("/chat/friends-dm");
   return response.data;
 };
 
@@ -113,6 +152,11 @@ export async function getRecommendedUsers() {
   return response.data;
 }
 
+export const updateUserStatus = async (status, customStatus) => {
+  const response = await axiosInstance.put("/users/status", { status, customStatus });
+  return response.data;
+};
+
 // --- FRIEND REQUEST ROUTES ---
 export async function getOutgoingFriendReqs() {
   const response = await axiosInstance.get("/users/outgoing-friend-requests");
@@ -133,3 +177,19 @@ export async function acceptFriendRequest(requestId) {
   const response = await axiosInstance.put(`/users/friend-request/${requestId}/accept`);
   return response.data;
 }
+
+// --- AI FEATURES ---
+export const translateMessageAI = async (text, targetLanguage) => {
+  const response = await axiosInstance.post("/ai/translate", { text, targetLanguage });
+  return response.data;
+};
+
+export const summarizeChatAI = async (userId) => {
+  const response = await axiosInstance.get(`/ai/summarize/${userId}`);
+  return response.data;
+};
+
+export const summarizeChannelAI = async (channelId) => {
+  const response = await axiosInstance.get(`/ai/summarize-channel/${channelId}`);
+  return response.data;
+};

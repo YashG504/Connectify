@@ -19,8 +19,8 @@ const OnboardingPage = () => {
   const [formState, setFormState] = useState({
     fullName: authUser?.fullName || "",
     bio: authUser?.bio || "",
-    nativeLanguage: authUser?.nativeLanguage || "",
-    learningLanguage: authUser?.learningLanguage || "",
+    jobTitle: authUser?.jobTitle || "",
+    preferredLanguage: authUser?.preferredLanguage || "english",
     location: authUser?.location || "",
     profilePic: authUser?.profilePic || "",
   });
@@ -115,52 +115,47 @@ const OnboardingPage = () => {
               />
             </div>
 
-            {/* Languages */}
+            {/* Job Title & Preferred Language */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Native Language */}
+              {/* Job Title */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Native Language</span>
+                  <span className="label-text">Job Title / Role</span>
                 </label>
-                <select
-                  name="nativeLanguage"
-                  value={formState.nativeLanguage}
+                <input
+                  type="text"
+                  name="jobTitle"
+                  value={formState.jobTitle}
                   onChange={(e) =>
                     setFormState({
                       ...formState,
-                      nativeLanguage: e.target.value,
+                      jobTitle: e.target.value,
                     })
                   }
-                  className="select select-bordered w-full"
-                >
-                  <option value="">Select your native language</option>
-                  {LANGUAGES.map((lang) => (
-                    <option key={`native-${lang}`} value={lang.toLowerCase()}>
-                      {lang}
-                    </option>
-                  ))}
-                </select>
+                  className="input input-bordered w-full"
+                  placeholder="e.g. Software Engineer"
+                />
               </div>
 
-              {/* Learning Language */}
+              {/* Preferred Language */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Learning Language</span>
+                  <span className="label-text">Preferred Language</span>
                 </label>
                 <select
-                  name="learningLanguage"
-                  value={formState.learningLanguage}
+                  name="preferredLanguage"
+                  value={formState.preferredLanguage}
                   onChange={(e) =>
                     setFormState({
                       ...formState,
-                      learningLanguage: e.target.value,
+                      preferredLanguage: e.target.value,
                     })
                   }
                   className="select select-bordered w-full"
                 >
-                  <option value="">Select language you're learning</option>
+                  <option value="">Select your preferred language</option>
                   {LANGUAGES.map((lang) => (
-                    <option key={`learning-${lang}`} value={lang.toLowerCase()}>
+                    <option key={`pref-${lang}`} value={lang.toLowerCase()}>
                       {lang}
                     </option>
                   ))}
@@ -171,30 +166,20 @@ const OnboardingPage = () => {
             {/* Location */}
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Location (Maharashtra)</span>
+                <span className="label-text">Location</span>
               </label>
               <div className="relative">
                 <MapPinIcon className="absolute top-1/2 transform -translate-y-1/2 left-3 size-5 text-base-content opacity-70" />
-                <select
+                <input
+                  type="text"
                   name="location"
                   value={formState.location}
                   onChange={(e) =>
                     setFormState({ ...formState, location: e.target.value })
                   }
-                  className="select select-bordered w-full pl-10"
-                >
-                  <option value="">Select your city</option>
-                  {[
-                    "Ahmednagar", "Akola", "Amravati", "Bhiwandi", "Bhusawal", 
-                    "Chandrapur", "Chhatrapati Sambhajinagar", "Dhule", "Jalgaon", 
-                    "Jalna", "Kalyan-Dombivli", "Kolhapur", "Latur", "Mira-Bhayandar", 
-                    "Mumbai", "Nagpur", "Nanded", "Nashik", "Navi Mumbai", 
-                    "Panvel", "Parbhani", "Pune", "Solapur", "Thane", 
-                    "Ulhasnagar", "Vasai-Virar"
-                  ].map((city) => (
-                    <option key={city} value={city}>{city}, India</option>
-                  ))}
-                </select>
+                  className="input input-bordered w-full pl-10"
+                  placeholder="e.g. Mumbai, India"
+                />
               </div>
             </div>
 

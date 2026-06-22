@@ -73,12 +73,16 @@ const NotificationsPage = () => {
                           <div>
                             <h3 className="font-semibold">{request.sender.fullName}</h3>
                             <div className="flex flex-wrap gap-1.5 mt-1">
-                              <span className="badge badge-secondary badge-sm">
-                                Native: {request.sender.nativeLanguage}
-                              </span>
-                              <span className="badge badge-outline badge-sm">
-                                Learning: {request.sender.learningLanguage}
-                              </span>
+                              {request.sender.jobTitle && (
+                                <span className="badge badge-secondary badge-sm">
+                                  {request.sender.jobTitle}
+                                </span>
+                              )}
+                              {request.sender.preferredLanguage && (
+                                <span className="badge badge-outline badge-sm">
+                                  {request.sender.preferredLanguage.charAt(0).toUpperCase() + request.sender.preferredLanguage.slice(1)}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
